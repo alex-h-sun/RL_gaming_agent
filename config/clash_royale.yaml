@@ -26,12 +26,12 @@ timing:
 deck:
   - knight
   - archers
-  - fireball
-  - log
+  - mini_pekka
+  - giant
   - minions
-  - mega_minion
-  - ice_golem
-  - ice_spirit
+  - fireball
+  - arrows
+  - musketeer
 
 # All UI regions are normalized (x, y, w, h) fractions of the mirrored
 # iPhone screen. Calibrate against real captures before live runs.
