@@ -36,8 +36,9 @@ also run locally if you prefer.
 
       git push -u origin worktree-imitation-learning
 
-      (Or merge to main and push; the notebook clones the repo's default
-      branch — edit the clone cell to `git checkout` the branch if unmerged.)
+      (Or merge to main and push; the notebook checks out `main` by default —
+      set `BRANCH = 'worktree-imitation-learning'` in the first cell if
+      unmerged.)
 
 - [ ] **4. Run `notebooks/bc_pretrain.ipynb` on Colab** (GPU runtime):
       upload your rollout `.npz` file(s), paste the video URLs, and —
@@ -45,8 +46,10 @@ also run locally if you prefer.
       the cropped frame shows only the game arena (no pillarboxing, no
       facecam, no chat overlay). Then run the remaining cells.
 
-- [ ] **5. Sanity-check the labeling printout.** The `train_bc` step prints
-      "N card plays, M no-ops". A healthy ratio is roughly 1 play per
+- [ ] **5. Sanity-check the IDM and labeling printouts.** The `train_idm`
+      step ends with a held-out accuracy line — card accuracy well above
+      chance (20%) means the IDM learned something. The `train_bc` step
+      prints "N card plays, M no-ops". A healthy ratio is roughly 1 play per
       3-10 seconds of gameplay (at 4 FPS: plays should be ~2-8% of pairs).
       If nearly everything is labeled no-op or everything is a play, the IDM
       is weak — collect more live rollouts (step 1) and retrain it.

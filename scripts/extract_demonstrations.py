@@ -95,13 +95,17 @@ def main() -> None:
 
         for video in args.videos:
             capture = cv2.VideoCapture(video)
+            # Frame 300 skips intros; fall back to the start for short videos.
             capture.set(cv2.CAP_PROP_POS_FRAMES, 300)
             ok, frame = capture.read()
+            if not ok:
+                capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ok, frame = capture.read()
             capture.release()
             if not ok:
                 print(f"Could not read a frame from {video}")
                 continue
-            preview = Path(video).with_suffix("") .name + "_crop_preview.png"
+            preview = Path(video).stem + "_crop_preview.png"
             cv2.imwrite(preview, crop_frame(frame, args.crop))
             print(f"Wrote {preview} — verify only the arena/gameplay is visible")
         return

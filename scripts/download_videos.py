@@ -15,8 +15,10 @@ import sys
 from pathlib import Path
 
 
-def download(urls: list[str], out_dir: Path) -> None:
+def download(urls: list[str], out_dir: Path) -> list[str]:
+    """Download each URL; returns the URLs that failed."""
     out_dir.mkdir(parents=True, exist_ok=True)
+    failed = []
     for url in urls:
         command = [
             sys.executable,
@@ -29,7 +31,9 @@ def download(urls: list[str], out_dir: Path) -> None:
             url,
         ]
         print(f"Downloading {url}")
-        subprocess.run(command, check=True)
+        if subprocess.run(command).returncode != 0:
+            failed.append(url)
+    return failed
 
 
 def main() -> None:
@@ -37,7 +41,9 @@ def main() -> None:
     parser.add_argument("urls", nargs="+", help="YouTube video URLs")
     parser.add_argument("--out", default="data/youtube", help="output directory")
     args = parser.parse_args()
-    download(args.urls, Path(args.out))
+    failed = download(args.urls, Path(args.out))
+    if failed:
+        raise SystemExit("Failed to download: " + ", ".join(failed))
 
 
 if __name__ == "__main__":

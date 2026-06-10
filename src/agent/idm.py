@@ -48,36 +48,114 @@ class InverseDynamicsModel(nn.Module):
         self.cell_head = nn.Linear(features_dim, N_CELLS)
 
     def forward(self, obs_pair: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """obs_pair: (batch, 24, 84, 84) float in [0, 255]."""
+        """obs_pair: (batch, 24, 84, 84) uint8 or float in [0, 255]."""
         features = self.trunk(self.cnn(obs_pair / 255.0))
         return self.card_head(features), self.cell_head(features)
 
 
 def _pairs_to_tensor(obs: np.ndarray, next_obs: np.ndarray) -> torch.Tensor:
-    """Stack channels-last uint8 pairs into a (n, 24, 84, 84) float tensor."""
+    """Stack channels-last uint8 pairs into a (n, 24, 84, 84) uint8 tensor.
+
+    Kept uint8 end to end; the model divides by 255 internally, so this is
+    4x cheaper in RAM and host-to-device transfer than float32.
+    """
     pair = np.concatenate([obs, next_obs], axis=-1)  # (n, 84, 84, 24)
-    return torch.as_tensor(pair.transpose(0, 3, 1, 2), dtype=torch.float32)
+    return torch.from_numpy(np.ascontiguousarray(pair.transpose(0, 3, 1, 2)))
+
+
+def valid_pair_indices(
+    n_observations: int, episode_starts: np.ndarray | None = None
+) -> np.ndarray:
+    """Indices i for which the pair (obs[i], obs[i+1]) is a real transition.
+
+    A pair is bogus when obs[i+1] begins a new episode (or a new rollout
+    file): the labeled action did not cause that frame change.
+    """
+    indices = np.arange(n_observations - 1)
+    if episode_starts is None:
+        return indices
+    return indices[episode_starts[1:n_observations] < 0.5]
+
+
+class _PairDataset(torch.utils.data.Dataset):
+    """Builds (obs_t, obs_{t+1}) tensors on demand instead of materializing
+    the full 24-channel dataset up front (which is ~680KB/pair in float32)."""
+
+    def __init__(
+        self, observations: np.ndarray, actions: np.ndarray, indices: np.ndarray
+    ):
+        self._observations = observations
+        self._actions = actions
+        self._indices = indices
+
+    def __len__(self) -> int:
+        return len(self._indices)
+
+    def __getitem__(self, item: int) -> tuple[torch.Tensor, torch.Tensor]:
+        i = self._indices[item]
+        pair = np.concatenate(
+            [self._observations[i], self._observations[i + 1]], axis=-1
+        )
+        inputs = torch.from_numpy(np.ascontiguousarray(pair.transpose(2, 0, 1)))
+        return inputs, torch.as_tensor(self._actions[i], dtype=torch.long)
+
+
+@torch.no_grad()
+def _evaluate_idm(
+    model: InverseDynamicsModel,
+    loader: torch.utils.data.DataLoader,
+    device: str,
+) -> tuple[float, float]:
+    """Return (card accuracy, cell accuracy) over a loader."""
+    model.eval()
+    correct_card, correct_cell, count = 0, 0, 0
+    for batch_inputs, batch_labels in loader:
+        batch_inputs = batch_inputs.to(device)
+        batch_labels = batch_labels.to(device)
+        card_logits, cell_logits = model(batch_inputs)
+        correct_card += (card_logits.argmax(1) == batch_labels[:, 0]).sum().item()
+        correct_cell += (cell_logits.argmax(1) == batch_labels[:, 1]).sum().item()
+        count += len(batch_labels)
+    model.train()
+    return correct_card / count, correct_cell / count
 
 
 def train_idm(
     observations: np.ndarray,
     actions: np.ndarray,
+    episode_starts: np.ndarray | None = None,
     epochs: int = 10,
     batch_size: int = 64,
     lr: float = 3e-4,
+    val_fraction: float = 0.1,
     device: str | None = None,
 ) -> InverseDynamicsModel:
     """Train an IDM on consecutive rollout observations with action labels.
 
     observations: (n, 84, 84, 12) uint8; actions: (n, 2) int64.
-    Pairs are (obs[i], obs[i+1]) labeled with actions[i].
+    Pairs are (obs[i], obs[i+1]) labeled with actions[i]; pairs that span an
+    episode boundary (episode_starts[i+1] == 1) are excluded. A held-out
+    split reports honest accuracy — the number to watch before trusting the
+    IDM to label demonstrations.
     """
     device = device or pick_device()
     model = InverseDynamicsModel().to(device)
-    inputs = _pairs_to_tensor(observations[:-1], observations[1:])
-    labels = torch.as_tensor(actions[:-1], dtype=torch.long)
-    dataset = torch.utils.data.TensorDataset(inputs, labels)
-    loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    indices = valid_pair_indices(len(observations), episode_starts)
+    rng = np.random.default_rng(0)
+    rng.shuffle(indices)
+    n_val = int(len(indices) * val_fraction) if len(indices) >= 20 else 0
+    train_set = _PairDataset(observations, actions, indices[n_val:])
+    loader = torch.utils.data.DataLoader(
+        train_set, batch_size=batch_size, shuffle=True
+    )
+    val_loader = (
+        torch.utils.data.DataLoader(
+            _PairDataset(observations, actions, indices[:n_val]),
+            batch_size=batch_size,
+        )
+        if n_val
+        else None
+    )
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     loss_fn = nn.CrossEntropyLoss()
 
@@ -100,6 +178,12 @@ def train_idm(
         print(
             f"IDM epoch {epoch + 1}/{epochs}: "
             f"loss {total / count:.4f}, card acc {correct_card / count:.2%}"
+        )
+    if val_loader is not None:
+        card_acc, cell_acc = _evaluate_idm(model, val_loader, device)
+        print(
+            f"IDM held-out ({n_val} pairs): "
+            f"card acc {card_acc:.2%}, cell acc {cell_acc:.2%}"
         )
     return model
 

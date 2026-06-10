@@ -7,13 +7,14 @@ import pytest
 from stable_baselines3 import PPO
 
 from scripts.extract_demonstrations import crop_frame, parse_crop
-from src.agent.bc import save_bc_checkpoint, train_bc
+from src.agent.bc import downsample_noops, save_bc_checkpoint, train_bc
 from src.agent.idm import (
     InverseDynamicsModel,
     label_pairs,
     load_idm,
     save_idm,
     train_idm,
+    valid_pair_indices,
 )
 from src.config import load_config
 
@@ -57,6 +58,47 @@ def test_bc_produces_loadable_ppo_checkpoint(tmp_path, synthetic_rollout):
     obs = observations[0]
     action, _ = reloaded.predict(obs, deterministic=True)
     assert action.shape == (2,)
+
+
+def test_valid_pair_indices_excludes_episode_boundaries():
+    starts = np.array([1.0, 0.0, 0.0, 1.0, 0.0], dtype=np.float32)
+    # Pair (2, 3) spans a reset: obs[3] starts a new episode.
+    assert valid_pair_indices(5, starts).tolist() == [0, 1, 3]
+    assert valid_pair_indices(5).tolist() == [0, 1, 2, 3]
+
+
+def test_idm_trains_with_episode_starts(synthetic_rollout):
+    observations, actions = synthetic_rollout
+    starts = np.zeros(N, dtype=np.float32)
+    starts[0] = starts[N // 2] = 1.0
+    model = train_idm(
+        observations,
+        actions,
+        episode_starts=starts,
+        epochs=1,
+        batch_size=4,
+        device="cpu",
+    )
+    assert isinstance(model, InverseDynamicsModel)
+
+
+def test_downsample_noops_keeps_all_plays(synthetic_rollout):
+    observations, actions = synthetic_rollout
+    kept_obs, kept_act = downsample_noops(observations, actions, keep_fraction=0.0)
+    assert (kept_act[:, 0] > 0).all()
+    assert kept_act.shape[0] == (actions[:, 0] > 0).sum()
+    assert kept_obs.shape[0] == kept_act.shape[0]
+
+    all_obs, all_act = downsample_noops(observations, actions, keep_fraction=1.0)
+    assert all_act.shape == actions.shape
+
+
+def test_train_bc_rejects_empty_dataset():
+    config = load_config("config/clash_royale.yaml")
+    empty_obs = np.zeros((0, 84, 84, 12), dtype=np.uint8)
+    empty_act = np.zeros((0, 2), dtype=np.int64)
+    with pytest.raises(ValueError):
+        train_bc(empty_obs, empty_act, config, epochs=1, device="cpu")
 
 
 def test_crop_frame():

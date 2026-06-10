@@ -18,6 +18,23 @@ from src.agent.model import make_ppo
 from src.env.mock_game_env import MockGameEnv
 
 
+def downsample_noops(
+    observations: np.ndarray,
+    actions: np.ndarray,
+    keep_fraction: float,
+    seed: int = 0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Keep every card play but only `keep_fraction` of no-op examples.
+
+    Most video frames have no card play; cloning them all yields a
+    do-nothing policy.
+    """
+    played = actions[:, 0] > 0
+    rng = np.random.default_rng(seed)
+    keep = played | (rng.random(len(actions)) < keep_fraction)
+    return observations[keep], actions[keep]
+
+
 def train_bc(
     observations: np.ndarray,
     actions: np.ndarray,
@@ -31,13 +48,17 @@ def train_bc(
 
     observations: (n, 84, 84, 12) uint8 channels-last; actions: (n, 2) int64.
     """
+    if len(actions) == 0:
+        raise ValueError("No demonstrations to clone")
     env = MockGameEnv()
     model = make_ppo(env, config, device=device)
     policy = model.policy
     optimizer = torch.optim.Adam(policy.parameters(), lr=lr)
 
-    obs_tensor = torch.as_tensor(
-        observations.transpose(0, 3, 1, 2), dtype=torch.float32
+    # uint8 end to end: SB3's preprocess_obs casts to float on the device,
+    # so this is 4x cheaper in RAM than materializing float32 here.
+    obs_tensor = torch.from_numpy(
+        np.ascontiguousarray(observations.transpose(0, 3, 1, 2))
     )
     act_tensor = torch.as_tensor(actions, dtype=torch.long)
     dataset = torch.utils.data.TensorDataset(obs_tensor, act_tensor)

@@ -27,19 +27,26 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=64)
     args = parser.parse_args()
 
-    # Concatenating files creates one bogus pair per file boundary —
-    # negligible noise relative to dataset size.
-    all_obs, all_act = [], []
+    all_obs, all_act, all_starts = [], [], []
     for path in args.rollouts:
         arrays = load_rollouts(path)
         all_obs.append(arrays["observations"])
         all_act.append(arrays["actions"])
-        print(f"{path}: {len(arrays['observations']) - 1} pairs")
+        # Force a boundary at each file start so pairs never span files.
+        starts = arrays["episode_starts"].copy()
+        starts[0] = 1.0
+        all_starts.append(starts)
+        print(f"{path}: {len(arrays['observations'])} steps")
 
     observations = np.concatenate(all_obs)
     actions = np.concatenate(all_act)
+    episode_starts = np.concatenate(all_starts)
     model = train_idm(
-        observations, actions, epochs=args.epochs, batch_size=args.batch_size
+        observations,
+        actions,
+        episode_starts=episode_starts,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
     )
     path = save_idm(model, args.out)
     print(f"Saved IDM: {path}")

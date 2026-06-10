@@ -16,7 +16,7 @@ from pathlib import Path
 
 import numpy as np
 
-from src.agent.bc import save_bc_checkpoint, train_bc
+from src.agent.bc import downsample_noops, save_bc_checkpoint, train_bc
 from src.agent.idm import label_pairs, load_idm
 from src.config import load_config
 
@@ -47,9 +47,9 @@ def main() -> None:
         f"{(~played).sum()} no-ops"
     )
 
-    rng = np.random.default_rng(0)
-    keep = played | (rng.random(len(actions)) < args.keep_noop_fraction)
-    observations, actions = observations[keep], actions[keep]
+    observations, actions = downsample_noops(
+        observations, actions, args.keep_noop_fraction
+    )
     print(f"Training BC on {len(actions)} examples after no-op downsampling")
 
     config = load_config(args.config)
