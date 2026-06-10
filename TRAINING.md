@@ -37,8 +37,8 @@ python3 -m venv .venv
   Recording** and **Accessibility**.
 - Open **iPhone Mirroring**, launch Clash Royale, sit on the main menu.
 - On the iPhone, set the training deck from `config/clash_royale.yaml`
-  (Knight, Archers, Fireball, Log, Minions, Mega Minion, Ice Golem,
-  Ice Spirit) as the active deck.
+  (Knight, Archers, Mini Pekka, Giant, Minions, Fireball, Arrows,
+  Musketeer) as the active deck.
 
 ### Verify capture works
 

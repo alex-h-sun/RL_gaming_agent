@@ -143,7 +143,7 @@ Clash Royale requires a deck of 8 cards chosen *before* a match starts. During a
 - Visually distinct card icons → reliable template matching in `detector.py`
 - Simple mechanics → fewer interaction edge cases
 
-**Recommended starter deck:** Knight · Archers · Fireball · Log · Minions · Mega Minion · Ice Golem · Ice Spirit (avg elixir ≈ 2.6)
+**Recommended starter deck:** Knight · Archers · Mini Pekka · Giant · Minions · Fireball · Arrows · Musketeer (avg elixir ≈ 3.5)
 
 The deck is declared in `config/clash_royale.yaml`. The detector loads the 8 corresponding icon templates and matches against the hand strip each step.
 
