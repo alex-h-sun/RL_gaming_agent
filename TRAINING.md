@@ -100,6 +100,12 @@ There is no checkpoint yet, so collect the first batch with random actions:
 This produces `rollouts/rollouts.npz`. Keep the game window visible and the
 Mac awake for the whole run (`caffeinate -d` helps).
 
+**Emergency stop:** slam the cursor into the **top-left corner of the
+screen**. pyautogui's failsafe aborts the run on its next mouse command —
+no terminal access needed — and the steps collected so far are saved to the
+output file (Ctrl+C behaves the same way). A partial file is still valid
+for the Colab step.
+
 **You are the navigator.** The agent only acts while a battle is running;
 it never touches menus. When a match ends (or before the first one), the
 script prints `Waiting for a battle...` and polls — dismiss the end screen

@@ -52,6 +52,39 @@ class TestNpzFormat:
         assert actions[:, 1].min() >= 0 and actions[:, 1].max() < 70
 
 
+class AbortingEnv(MockGameEnv):
+    """Raises KeyboardInterrupt (abort) partway through collection."""
+
+    def __init__(self, abort_after: int):
+        super().__init__(min_episode_steps=100, max_episode_steps=100)
+        self._abort_after = abort_after
+        self._total = 0
+
+    def step(self, action):
+        self._total += 1
+        if self._total > self._abort_after:
+            raise KeyboardInterrupt
+        return super().step(action)
+
+
+class TestAbortSavesPartial:
+    def test_partial_rollout_saved_on_abort(self, tmp_path):
+        env = AbortingEnv(abort_after=10)
+        path = collect_rollouts(env, model=None, n_steps=32,
+                                output_path=tmp_path / "partial.npz",
+                                random_policy=True)
+        arrays = load_rollouts(path)
+        assert arrays["observations"].shape == (10, 84, 84, 12)
+        assert arrays["rewards"].shape == (10,)
+
+    def test_abort_before_first_step_raises(self, tmp_path):
+        env = AbortingEnv(abort_after=0)
+        with pytest.raises(KeyboardInterrupt):
+            collect_rollouts(env, model=None, n_steps=32,
+                             output_path=tmp_path / "none.npz",
+                             random_policy=True)
+
+
 class TestColabTrainingPath:
     def test_gradient_update_on_rollouts(self, rollout_file, tmp_path, config):
         """End-to-end learner step: load .npz -> PPO update -> save .zip."""

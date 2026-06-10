@@ -26,12 +26,14 @@ class MacActions:
     def tap(self, point: tuple[float, float]) -> None:
         import pyautogui
 
+        pyautogui.FAILSAFE = True  # slam cursor to top-left corner to abort
         x, y = self._to_screen(point)
         pyautogui.click(x, y, duration=self._tap_duration)
 
     def drag(self, source: tuple[float, float], target: tuple[float, float]) -> None:
         import pyautogui
 
+        pyautogui.FAILSAFE = True  # slam cursor to top-left corner to abort
         sx, sy = self._to_screen(source)
         tx, ty = self._to_screen(target)
         pyautogui.moveTo(sx, sy)
