@@ -25,8 +25,6 @@ ui_regions:
   result_banner: [0.30, 0.10, 0.40, 0.15]
   joystick_center: [0.15, 0.75, 0.0, 0.0]   # tap/drag points: (x, y), w/h unused
   attack_button: [0.85, 0.78, 0.0, 0.0]
-  continue_button: [0.85, 0.92, 0.0, 0.0]
-  play_button: [0.50, 0.85, 0.0, 0.0]
 
 reward:
   gamma: 0.99

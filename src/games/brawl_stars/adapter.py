@@ -69,13 +69,6 @@ class BrawlStarsAdapter:
     def is_terminal(self, state: BrawlState) -> bool:
         return state.screen is ScreenState.RESULTS
 
-    def reset_gesture(self, state: BrawlState) -> Gesture | None:
-        if state.screen is ScreenState.RESULTS:
-            return Tap(tuple(self._ui["continue_button"][:2]))
-        if state.screen is ScreenState.MAIN_MENU:
-            return Tap(tuple(self._ui["play_button"][:2]))
-        return None
-
     def shaped_reward(self, prev_state: BrawlState, curr_state: BrawlState) -> float:
         return shaped_reward(prev_state, curr_state, self._reward_config)
 

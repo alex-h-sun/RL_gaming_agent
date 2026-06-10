@@ -48,8 +48,6 @@ ui_regions:
   our_left_tower_hp: [0.18, 0.625, 0.16, 0.012]
   our_right_tower_hp: [0.66, 0.625, 0.16, 0.012]
   our_king_hp: [0.40, 0.715, 0.20, 0.012]
-  battle_button: [0.50, 0.62, 0.0, 0.0]   # tap point (x, y), w/h unused
-  ok_button: [0.50, 0.88, 0.0, 0.0]
 
 reward:
   gamma: 0.99

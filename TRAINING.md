@@ -65,9 +65,7 @@ configured region drawn on the captured frame (green boxes = detection
 regions, red circles = tap points) and prints the detected state. If the
 boxes don't sit on the real elixir bar / HP bars, adjust the `ui_regions`
 fractions in the YAML and re-run until the printed state matches the
-screen. Also verify the `battle_button` and `ok_button` tap points from the
-menu and end screens. For Brawl Stars, repeat with
-`--config config/brawl_stars.yaml`.
+screen. For Brawl Stars, repeat with `--config config/brawl_stars.yaml`.
 
 Capture grabs the window by ID, so other windows overlapping the game do
 not corrupt frames. The window must still be on screen and unminimized —
@@ -101,6 +99,12 @@ There is no checkpoint yet, so collect the first batch with random actions:
 
 This produces `rollouts/rollouts.npz`. Keep the game window visible and the
 Mac awake for the whole run (`caffeinate -d` helps).
+
+**You are the navigator.** The agent only acts while a battle is running;
+it never touches menus. When a match ends (or before the first one), the
+script prints `Waiting for a battle...` and polls — dismiss the end screen
+and start the next match yourself, and collection resumes automatically the
+moment a battle is detected. It waits up to 5 minutes between matches.
 
 ## 2. Learner step on Colab
 
@@ -192,6 +196,6 @@ sync. Keep `n_steps` equal to the `--steps` you collect with.
 | Black captured frames | Disable screen-recording protection on iPhone; check Screen Recording permission |
 | `Window 'iPhone Mirroring' not found` | Window must be open, unminimized, on the active Space |
 | Taps don't register in game | Accessibility permission missing; window moved (rect is cached — restart the run) |
-| `reset()` times out | `battle_button` / `ok_button` coords wrong, or detector misclassifies the menu — recalibrate |
+| `reset()` times out | No battle started within 5 minutes — start the next match yourself when you see `Waiting for a battle...`. If you did and it still waits, the detector misclassifies IN_BATTLE — recalibrate |
 | Elixir/HP readings wrong | Recalibrate `ui_regions` (section 0) |
 | Colab: shape mismatch on load | Mac and Colab built different models — make sure both sides are on the same commit and YAML |

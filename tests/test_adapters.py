@@ -42,15 +42,6 @@ class TestClashRoyaleAdapter:
         assert len(gestures) == 1
         assert isinstance(gestures[0], Drag)
 
-    def test_navigation(self, config):
-        adapter = ClashRoyaleAdapter(config)
-        end = GameState(screen=ScreenState.END_SCREEN)
-        menu = GameState(screen=ScreenState.MAIN_MENU)
-        battle = GameState(screen=ScreenState.IN_BATTLE)
-        assert isinstance(adapter.reset_gesture(end), Tap)
-        assert isinstance(adapter.reset_gesture(menu), Tap)
-        assert adapter.reset_gesture(battle) is None
-
     def test_terminal_reward_from_crowns(self, config):
         adapter = ClashRoyaleAdapter(config)
         winning = GameState(screen=ScreenState.IN_BATTLE, crowns_won=2, crowns_lost=0)

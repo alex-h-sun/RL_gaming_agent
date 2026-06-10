@@ -45,9 +45,6 @@ class GameAdapter(Protocol):
     def is_terminal(self, state) -> bool:
         """True when the episode just ended (results/end screen)."""
 
-    def reset_gesture(self, state) -> Gesture | None:
-        """Navigation gesture toward a new battle from a non-battle screen."""
-
     def shaped_reward(self, prev_state, curr_state) -> float:
         """Dense per-step reward while in battle."""
 

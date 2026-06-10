@@ -18,7 +18,7 @@ import numpy as np
 from src.games.clash_royale.reward import blended_reward
 from src.games.registry import make_adapter
 
-RESET_TIMEOUT_S = 90.0
+RESET_TIMEOUT_S = 300.0  # generous: the user navigates menus manually
 MAX_EPISODE_STEPS = 1500  # ~6 min at 4 FPS
 
 
@@ -54,6 +54,7 @@ class GameEnv(gym.Env):
         self._capture, self._actions = self._build_backend(platform, serial)
         self._frames: deque[np.ndarray] = deque(maxlen=self._stack_size)
         self._prev_state = None
+        self._in_battle = False
         self._steps = 0
 
     def _build_backend(self, platform: str, serial: str | None):
@@ -90,36 +91,50 @@ class GameEnv(gym.Env):
         super().reset(seed=seed)
         self._frames.clear()
         self._steps = 0
-        self._navigate_to_battle()
+        self._wait_for_battle()
         obs, state = self._observe()
         self._prev_state = state
+        self._in_battle = True
         return obs, {"state": state}
 
-    def _navigate_to_battle(self) -> None:
-        """Follow the adapter's navigation gestures until a battle starts."""
+    def _wait_for_battle(self) -> None:
+        """Poll until a battle is running. The agent never touches menus:
+        the user navigates end screens and the main menu manually."""
         deadline = time.time() + RESET_TIMEOUT_S
+        announced = False
         while time.time() < deadline:
             raw = self._capture.capture_raw()
             state = self._adapter.detect(_to_rgb(raw))
             if self._adapter.is_in_battle(state):
+                if announced:
+                    print("Battle detected — resuming.")
                 return
-            gesture = self._adapter.reset_gesture(state)
-            if gesture is not None:
-                self._actions.execute(gesture)
-            time.sleep(1.5)
-        raise TimeoutError("Could not reach a running battle within reset timeout")
+            if not announced:
+                print(
+                    "Waiting for a battle. Navigate the game into a match "
+                    "yourself; the agent only acts during battles."
+                )
+                announced = True
+            time.sleep(1.0)
+        raise TimeoutError(
+            f"No battle detected within {RESET_TIMEOUT_S:.0f}s of waiting"
+        )
 
     def step(self, action):
-        for gesture in self._adapter.action_to_gestures(action):
-            self._actions.execute(gesture)
+        # Gestures are only injected while the last observed screen was a
+        # running battle; on every other screen the user has control.
+        if self._in_battle:
+            for gesture in self._adapter.action_to_gestures(action):
+                self._actions.execute(gesture)
         time.sleep(self._step_seconds)
         obs, state = self._observe()
         self._steps += 1
 
         terminated = self._adapter.is_terminal(state)
         truncated = self._steps >= MAX_EPISODE_STEPS
+        self._in_battle = self._adapter.is_in_battle(state)
 
-        if self._adapter.is_in_battle(state):
+        if self._in_battle:
             shaped = self._adapter.shaped_reward(self._prev_state, state)
             win_loss = 0.0
             self._prev_state = state

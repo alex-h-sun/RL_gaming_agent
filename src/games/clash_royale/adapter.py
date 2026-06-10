@@ -7,7 +7,7 @@ from typing import Any
 import gymnasium as gym
 
 from src.actions.mapping import decode_action
-from src.games.base import Drag, Gesture, Tap
+from src.games.base import Drag, Gesture
 from src.games.clash_royale.detector import Detector
 from src.games.clash_royale.reward import (
     RewardConfig,
@@ -43,13 +43,6 @@ class ClashRoyaleAdapter:
 
     def is_terminal(self, state: GameState) -> bool:
         return state.screen is ScreenState.END_SCREEN
-
-    def reset_gesture(self, state: GameState) -> Gesture | None:
-        if state.screen is ScreenState.END_SCREEN:
-            return Tap(tuple(self._ui["ok_button"][:2]))
-        if state.screen is ScreenState.MAIN_MENU:
-            return Tap(tuple(self._ui["battle_button"][:2]))
-        return None
 
     def shaped_reward(self, prev_state: GameState, curr_state: GameState) -> float:
         return shaped_reward(prev_state, curr_state, self._reward_config)

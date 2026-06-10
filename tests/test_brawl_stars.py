@@ -156,12 +156,3 @@ class TestAdapter:
         battle = BrawlState(screen=ScreenState.IN_MATCH)
         results = BrawlState(screen=ScreenState.RESULTS, won=True)
         assert adapter.terminal_reward(battle, results) == pytest.approx(5.0)
-
-    def test_navigation_gestures(self, bs_config):
-        adapter = BrawlStarsAdapter(bs_config)
-        menu = BrawlState(screen=ScreenState.MAIN_MENU)
-        results = BrawlState(screen=ScreenState.RESULTS)
-        match = BrawlState(screen=ScreenState.IN_MATCH)
-        assert isinstance(adapter.reset_gesture(menu), Tap)
-        assert isinstance(adapter.reset_gesture(results), Tap)
-        assert adapter.reset_gesture(match) is None
