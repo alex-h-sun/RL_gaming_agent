@@ -6,7 +6,8 @@ game state with CV, injects touch actions, and trains with PPO using a
 decoupled actor-learner loop: the Mac collects experience, Google Colab runs
 the gradient updates.
 
-See `PLAN.md` for the full design (reward shaping, curriculum, action space).
+See `PLAN.md` for the full design (reward shaping, curriculum, action space)
+and `TRAINING.md` for the step-by-step training workflow.
 
 ## Setup
 
