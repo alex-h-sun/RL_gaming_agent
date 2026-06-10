@@ -16,15 +16,19 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
-    required = ("observation", "arena", "action", "timing", "ui_regions", "reward")
+    required = ("game", "observation", "action", "timing", "ui_regions", "reward")
     missing = [key for key in required if key not in config]
     if missing:
         raise ValueError(f"Config {config_path} missing sections: {missing}")
 
-    arena = config["arena"]
-    action = config["action"]
-    if action["num_cells"] != arena["grid_rows"] * arena["grid_cols"]:
-        raise ValueError(
-            "action.num_cells must equal arena.grid_rows * arena.grid_cols"
-        )
+    if config["game"] == "clash_royale":
+        arena = config["arena"]
+        action = config["action"]
+        if action["num_cells"] != arena["grid_rows"] * arena["grid_cols"]:
+            raise ValueError(
+                "action.num_cells must equal arena.grid_rows * arena.grid_cols"
+            )
+    elif config["game"] == "brawl_stars":
+        if "joystick_radius" not in config["action"]:
+            raise ValueError("brawl_stars config requires action.joystick_radius")
     return config

@@ -18,7 +18,12 @@ NUM_CELLS = 70
 class MockGameEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, min_episode_steps: int = 50, max_episode_steps: int = 200):
+    def __init__(
+        self,
+        min_episode_steps: int = 50,
+        max_episode_steps: int = 200,
+        action_nvec: tuple[int, ...] = (NUM_CARDS, NUM_CELLS),
+    ):
         super().__init__()
         self.observation_space = gym.spaces.Box(
             low=0,
@@ -26,7 +31,7 @@ class MockGameEnv(gym.Env):
             shape=(FRAME_SIZE, FRAME_SIZE, STACK_CHANNELS),
             dtype=np.uint8,
         )
-        self.action_space = gym.spaces.MultiDiscrete([NUM_CARDS, NUM_CELLS])
+        self.action_space = gym.spaces.MultiDiscrete(list(action_nvec))
         self._min_steps = min_episode_steps
         self._max_steps = max_episode_steps
         self._steps = 0

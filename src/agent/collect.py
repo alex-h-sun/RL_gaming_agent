@@ -25,7 +25,7 @@ def collect_rollouts(
     observations = np.zeros(
         (n_steps, *env.observation_space.shape), dtype=env.observation_space.dtype
     )
-    actions = np.zeros((n_steps, 2), dtype=np.int64)
+    actions = np.zeros((n_steps, len(env.action_space.nvec)), dtype=np.int64)
     rewards = np.zeros(n_steps, dtype=np.float32)
     episode_starts = np.zeros(n_steps, dtype=np.float32)
     values = np.zeros(n_steps, dtype=np.float32)

@@ -18,11 +18,18 @@ from src.config import load_config
 def build_env(args, config):
     if args.mock:
         from src.env.mock_game_env import MockGameEnv
+        from src.games.registry import make_adapter
 
-        return MockGameEnv()
+        action_nvec = tuple(make_adapter(config).build_action_space().nvec)
+        return MockGameEnv(action_nvec=action_nvec)
     from src.env.game_env import GameEnv
 
-    return GameEnv(config, platform=args.platform, curriculum_round=args.round)
+    return GameEnv(
+        config,
+        platform=args.platform,
+        curriculum_round=args.round,
+        serial=args.serial,
+    )
 
 
 def build_model(args, env, config):
@@ -41,7 +48,13 @@ def main() -> None:
     parser.add_argument("--episodes", type=int, default=20)
     parser.add_argument("--model", default="checkpoints/best.zip")
     parser.add_argument("--output", default="rollouts/rollouts.npz")
-    parser.add_argument("--config", default=None)
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="game config yaml (default config/clash_royale.yaml; "
+        "use config/brawl_stars.yaml for Brawl Stars)",
+    )
+    parser.add_argument("--serial", default=None, help="ADB device serial")
     parser.add_argument("--random", action="store_true", help="use a random policy")
     parser.add_argument("--mock", action="store_true", help="use MockGameEnv (no game)")
     parser.add_argument(

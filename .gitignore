@@ -6,3 +6,4 @@ rollouts/*.npz
 checkpoints/*.zip
 tests/fixtures/*.png
 .DS_Store
+.claude/

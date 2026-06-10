@@ -6,6 +6,7 @@ from typing import Any
 
 from src.actions.mapping import decode_action
 from src.capture.mac_capture import WindowRect
+from src.games.base import Drag, Gesture, Tap
 
 
 class MacActions:
@@ -35,6 +36,14 @@ class MacActions:
         tx, ty = self._to_screen(target)
         pyautogui.moveTo(sx, sy)
         pyautogui.dragTo(tx, ty, duration=self._drag_duration, button="left")
+
+    def execute(self, gesture: Gesture) -> None:
+        if isinstance(gesture, Tap):
+            self.tap(gesture.point)
+        elif isinstance(gesture, Drag):
+            self.drag(gesture.source, gesture.target)
+        else:
+            raise TypeError(f"Unknown gesture: {gesture!r}")
 
     def play(self, action: tuple[int, int] | list[int]) -> bool:
         """Execute an agent action. Returns False for no-op."""

@@ -1,8 +1,9 @@
-"""Live Clash Royale gymnasium environment.
+"""Live gymnasium environment, game-agnostic via GameAdapter.
 
+The config's `game:` key selects the adapter (clash_royale, brawl_stars).
 Requires the game running (iPhone Mirroring on Mac, or Android via ADB).
 Observation: 4-frame stack of 84x84 RGB -> (84, 84, 12) uint8.
-Action: MultiDiscrete([5, 70]) -> card slot (0 = no-op) + arena grid cell.
+Action space: defined by the game adapter.
 """
 
 from __future__ import annotations
@@ -14,17 +15,11 @@ from typing import Any
 import gymnasium as gym
 import numpy as np
 
-from src.games.clash_royale.detector import Detector
-from src.games.clash_royale.reward import (
-    RewardConfig,
-    blended_reward,
-    shaped_reward,
-    terminal_reward,
-)
-from src.games.clash_royale.state import GameState, ScreenState
+from src.games.clash_royale.reward import blended_reward
+from src.games.registry import make_adapter
 
 RESET_TIMEOUT_S = 90.0
-MAX_EPISODE_STEPS = 1500  # ~6 min at 4 FPS; matches overtime cap
+MAX_EPISODE_STEPS = 1500  # ~6 min at 4 FPS
 
 
 class GameEnv(gym.Env):
@@ -35,10 +30,11 @@ class GameEnv(gym.Env):
         config: dict[str, Any],
         platform: str = "mac",
         curriculum_round: int = 0,
+        serial: str | None = None,
     ):
         super().__init__()
         self._config = config
-        self._reward_config = RewardConfig.from_config(config)
+        self._adapter = make_adapter(config)
         self._phase_rounds = config.get("curriculum", {}).get("phase_rounds", 200)
         self._curriculum_round = curriculum_round
 
@@ -53,17 +49,14 @@ class GameEnv(gym.Env):
             shape=(self._frame_size, self._frame_size, 3 * self._stack_size),
             dtype=np.uint8,
         )
-        self.action_space = gym.spaces.MultiDiscrete(
-            [config["action"]["num_cards"], config["action"]["num_cells"]]
-        )
+        self.action_space = self._adapter.build_action_space()
 
-        self._capture, self._actions = self._build_backend(platform)
-        self._detector = Detector(config)
+        self._capture, self._actions = self._build_backend(platform, serial)
         self._frames: deque[np.ndarray] = deque(maxlen=self._stack_size)
-        self._prev_state = GameState()
+        self._prev_state = None
         self._steps = 0
 
-    def _build_backend(self, platform: str):
+    def _build_backend(self, platform: str, serial: str | None):
         if platform == "mac":
             from src.actions.mac_actions import MacActions
             from src.capture.mac_capture import MacCapture
@@ -76,13 +69,13 @@ class GameEnv(gym.Env):
             from src.actions.adb_actions import AdbActions
             from src.capture.adb_capture import AdbCapture
 
-            capture = AdbCapture(frame_size=self._frame_size)
-            return capture, AdbActions(capture._device, self._config)
+            capture = AdbCapture(serial=serial, frame_size=self._frame_size)
+            return capture, AdbActions(capture.device, self._config)
         raise ValueError(f"Unknown platform: {platform}")
 
-    def _observe(self) -> tuple[np.ndarray, GameState]:
+    def _observe(self):
         raw = self._capture.capture_raw()
-        state = self._detector.detect(_to_rgb(raw))
+        state = self._adapter.detect(_to_rgb(raw))
         from src.capture.preprocess import to_observation
 
         self._frames.append(to_observation(raw, self._frame_size))
@@ -103,53 +96,42 @@ class GameEnv(gym.Env):
         return obs, {"state": state}
 
     def _navigate_to_battle(self) -> None:
-        """END_SCREEN -> tap OK -> MAIN_MENU -> tap Battle -> IN_BATTLE."""
-        ui = self._config["ui_regions"]
+        """Follow the adapter's navigation gestures until a battle starts."""
         deadline = time.time() + RESET_TIMEOUT_S
         while time.time() < deadline:
             raw = self._capture.capture_raw()
-            screen = self._detector.detect(_to_rgb(raw)).screen
-            if screen is ScreenState.IN_BATTLE:
+            state = self._adapter.detect(_to_rgb(raw))
+            if self._adapter.is_in_battle(state):
                 return
-            if screen is ScreenState.END_SCREEN:
-                self._actions.tap(tuple(ui["ok_button"][:2]))
-            elif screen is ScreenState.MAIN_MENU:
-                self._actions.tap(tuple(ui["battle_button"][:2]))
+            gesture = self._adapter.reset_gesture(state)
+            if gesture is not None:
+                self._actions.execute(gesture)
             time.sleep(1.5)
-        raise TimeoutError("Could not reach IN_BATTLE within reset timeout")
+        raise TimeoutError("Could not reach a running battle within reset timeout")
 
     def step(self, action):
-        self._actions.play(action)
+        for gesture in self._adapter.action_to_gestures(action):
+            self._actions.execute(gesture)
         time.sleep(self._step_seconds)
         obs, state = self._observe()
         self._steps += 1
 
-        terminated = state.screen is ScreenState.END_SCREEN
+        terminated = self._adapter.is_terminal(state)
         truncated = self._steps >= MAX_EPISODE_STEPS
 
-        if state.screen is ScreenState.IN_BATTLE:
-            shaped = shaped_reward(self._prev_state, state, self._reward_config)
+        if self._adapter.is_in_battle(state):
+            shaped = self._adapter.shaped_reward(self._prev_state, state)
             win_loss = 0.0
             self._prev_state = state
         else:
-            # Battle over: decide win/loss from last known crown counts.
-            won = _infer_win(self._prev_state)
             shaped = 0.0
-            win_loss = terminal_reward(won, self._reward_config)
+            win_loss = self._adapter.terminal_reward(self._prev_state, state)
 
         reward = blended_reward(
             shaped, win_loss, self._curriculum_round, self._phase_rounds
         )
         info = {"state": state, "steps": self._steps}
         return obs, float(reward), terminated, truncated, info
-
-
-def _infer_win(last_battle_state: GameState) -> bool | None:
-    if last_battle_state.crowns_won > last_battle_state.crowns_lost:
-        return True
-    if last_battle_state.crowns_won < last_battle_state.crowns_lost:
-        return False
-    return None
 
 
 def _to_rgb(raw: np.ndarray) -> np.ndarray:

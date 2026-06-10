@@ -29,8 +29,13 @@ def train_on_rollouts(
 ):
     from src.agent.model import load_or_init
 
+    from src.games.registry import make_adapter
+
     config = config or load_config()
-    env = MockGameEnv()  # spaces donor only; never stepped during training
+    # Spaces donor only; never stepped during training. The action space
+    # comes from the configured game so checkpoints match the actor side.
+    action_nvec = tuple(make_adapter(config).build_action_space().nvec)
+    env = MockGameEnv(action_nvec=action_nvec)
     model = load_or_init(checkpoint_path, env, config, device)
     model.set_logger(configure(None, ["stdout"]))
 

@@ -60,6 +60,13 @@ python -m src.main --mode collect --mock --steps 64 --random
 
 # Evaluate a checkpoint over 20 live episodes
 python -m src.main --mode eval --model checkpoints/best.zip --episodes 20
+
+# v2: Brawl Stars (separate config and checkpoints)
+python -m src.main --mode collect --steps 2048 --config config/brawl_stars.yaml \
+    --model checkpoints/brawl_best.zip --output rollouts/brawl_rollouts.npz
+
+# v2: Android emulator instead of iPhone Mirroring
+python -m src.main --mode collect --steps 2048 --platform adb --serial emulator-5554
 ```
 
 ## Layout
@@ -68,10 +75,16 @@ python -m src.main --mode eval --model checkpoints/best.zip --episodes 20
 src/
   capture/    mac_capture.py (Quartz + mss), adb_capture.py, preprocess.py
   actions/    mapping.py (action -> coords), mac_actions.py, adb_actions.py
+  games/      base.py (Gesture + GameAdapter protocol), registry.py
   games/clash_royale/
               detector.py (screen state, elixir, tower HP, hand)
               reward.py   (PBRS + destroy + activation + waste + curriculum)
               state.py    (GameState / ScreenState / TowerHP)
+              adapter.py  (GameAdapter implementation)
+  games/brawl_stars/
+              detector.py (screen state, own HP, ammo, super)
+              reward.py   (HP PBRS + survival + victory/defeat)
+              adapter.py  (joystick movement + attack/super actions)
   env/        game_env.py (live), mock_game_env.py (synthetic, same spaces)
   agent/      model.py (PPO factory), collect.py (actor), rollout_io.py
               (.npz contract), train_colab.py (learner), evaluate.py

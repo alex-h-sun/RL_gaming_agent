@@ -15,6 +15,10 @@ class AdbCapture:
         self._device = adb.device(serial) if serial else adb.device()
         self._frame_size = frame_size
 
+    @property
+    def device(self):
+        return self._device
+
     def capture_raw(self) -> np.ndarray:
         """Full-resolution RGB frame for the detector."""
         image = self._device.screenshot()  # PIL.Image
