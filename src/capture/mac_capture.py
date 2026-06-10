@@ -21,6 +21,7 @@ class WindowRect:
     top: int
     width: int
     height: int
+    window_id: int = 0  # CGWindow number; 0 = unknown (screen-region grabs only)
 
 
 def find_window(title: str = "iPhone Mirroring") -> WindowRect:
@@ -39,6 +40,7 @@ def find_window(title: str = "iPhone Mirroring") -> WindowRect:
                 top=int(bounds["Y"]),
                 width=int(bounds["Width"]),
                 height=int(bounds["Height"]),
+                window_id=int(window.get("kCGWindowNumber", 0)),
             )
     raise RuntimeError(
         f"Window '{title}' not found. Is iPhone Mirroring open and on screen?"
@@ -46,7 +48,31 @@ def find_window(title: str = "iPhone Mirroring") -> WindowRect:
 
 
 def grab_raw(rect: WindowRect) -> np.ndarray:
-    """Grab the window region with mss; fall back to CGWindowListCreateImage."""
+    """Grab the window contents.
+
+    Primary: CGWindowListCreateImage with the window ID — captures the
+    window itself, so other windows sitting on top do not corrupt the frame.
+    Fallback: mss screen-region grab (requires the window unobstructed).
+    """
+    frame = None
+    if rect.window_id:
+        try:
+            frame = _grab_window_image(rect.window_id)
+        except Exception:
+            frame = None
+
+    if frame is None or is_black_frame(frame):
+        frame = _grab_screen_region(rect)
+        if is_black_frame(frame):
+            raise RuntimeError(
+                "Captured frame is black via both window-ID and screen grabs. "
+                "Disable 'Prevent screen recording' on the iPhone and check "
+                "the Screen Recording permission."
+            )
+    return frame
+
+
+def _grab_screen_region(rect: WindowRect) -> np.ndarray:
     import mss
 
     with mss.mss() as sct:
@@ -56,27 +82,18 @@ def grab_raw(rect: WindowRect) -> np.ndarray:
             "width": rect.width,
             "height": rect.height,
         }
-        frame = np.asarray(sct.grab(monitor))  # BGRA
-
-    if is_black_frame(frame):
-        frame = _grab_via_quartz(rect)
-        if is_black_frame(frame):
-            raise RuntimeError(
-                "Captured frame is black via both mss and Quartz. Disable "
-                "'Prevent screen recording' on the iPhone and retry."
-            )
-    return frame
+        return np.asarray(sct.grab(monitor))  # BGRA
 
 
-def _grab_via_quartz(rect: WindowRect) -> np.ndarray:
+def _grab_window_image(window_id: int) -> np.ndarray:
+    """Capture one window's contents by ID, ignoring overlapping windows."""
     import Quartz
 
-    cg_rect = Quartz.CGRectMake(rect.left, rect.top, rect.width, rect.height)
     image = Quartz.CGWindowListCreateImage(
-        cg_rect,
-        Quartz.kCGWindowListOptionOnScreenOnly,
-        Quartz.kCGNullWindowID,
-        Quartz.kCGWindowImageDefault,
+        Quartz.CGRectNull,
+        Quartz.kCGWindowListOptionIncludingWindow,
+        window_id,
+        Quartz.kCGWindowImageBoundsIgnoreFraming,
     )
     if image is None:
         raise RuntimeError("CGWindowListCreateImage returned no image")

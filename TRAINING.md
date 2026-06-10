@@ -57,25 +57,22 @@ The detector reads elixir and tower HP from normalized regions in
 window before any real training:
 
 ```bash
-.venv/bin/python - <<'EOF'
-from src.capture.mac_capture import MacCapture
-from src.config import load_config
-from src.games.clash_royale.detector import Detector
-import cv2
-
-raw = MacCapture().capture_raw()
-rgb = raw[:, :, 2::-1]
-cv2.imwrite("calibration_frame.png", raw[:, :, :3])
-state = Detector(load_config()).detect(rgb)
-print(state)
-EOF
+.venv/bin/python -m scripts.calibrate
 ```
 
-Run it during a battle. If `screen` is not `IN_BATTLE` or `elixir`/tower HPs
-are wrong, open `calibration_frame.png`, measure where the elixir bar and HP
-bars actually sit, and adjust the `ui_regions` fractions in the YAML until
-the printed state matches the screen. Also verify the `battle_button` and
-`ok_button` tap points from the menu and end screens.
+Run it during a battle. It saves `calibration_overlay.png` with every
+configured region drawn on the captured frame (green boxes = detection
+regions, red circles = tap points) and prints the detected state. If the
+boxes don't sit on the real elixir bar / HP bars, adjust the `ui_regions`
+fractions in the YAML and re-run until the printed state matches the
+screen. Also verify the `battle_button` and `ok_button` tap points from the
+menu and end screens. For Brawl Stars, repeat with
+`--config config/brawl_stars.yaml`.
+
+Capture grabs the window by ID, so other windows overlapping the game do
+not corrupt frames. The window must still be on screen and unminimized —
+and during collection it must also be unobstructed and frontmost, because
+mouse clicks (unlike capture) always go to whatever is on top.
 
 ### Sanity-check the whole pipeline without the game
 

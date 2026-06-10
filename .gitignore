@@ -7,3 +7,4 @@ checkpoints/*.zip
 tests/fixtures/*.png
 .DS_Store
 .claude/
+calibration_*.png
