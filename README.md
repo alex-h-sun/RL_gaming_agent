@@ -1,5 +1,7 @@
 # RL Gaming Agent — Clash Royale
 
+Purely for educational purposes
+
 A reinforcement learning agent that plays Clash Royale through iPhone Mirroring
 on macOS (or an Android emulator via ADB). It captures game frames, extracts
 game state with CV, injects touch actions, and trains with PPO using a
