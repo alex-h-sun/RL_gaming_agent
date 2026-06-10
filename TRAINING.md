@@ -77,7 +77,10 @@ mouse clicks (unlike capture) always go to whatever is on top.
 ### Sanity-check the whole pipeline without the game
 
 ```bash
-.venv/bin/python -m pytest tests/                      # 59 offline tests
+# all offline unit tests, no game needed
+.venv/bin/python -m pytest tests/
+
+# full collect pipeline against the mock env
 .venv/bin/python -m src.main --mode collect --mock --steps 64 --random
 ```
 
