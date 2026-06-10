@@ -11,7 +11,7 @@ arena:
   grid_rows: 10
   grid_cols: 7
   # Normalized (x, y, w, h) region of the playable arena within the frame.
-  region: [0.0, 0.12, 1.0, 0.60]
+  region: [0.05, 0.17, 0.90, 0.56]
 
 action:
   num_cards: 5          # 0 = no-op, 1-4 = card slots
@@ -36,18 +36,18 @@ deck:
 # All UI regions are normalized (x, y, w, h) fractions of the mirrored
 # iPhone screen. Calibrate against real captures before live runs.
 ui_regions:
-  elixir_bar: [0.22, 0.945, 0.74, 0.02]
+  elixir_bar: [0.21, 0.953, 0.72, 0.012]
   card_slots:
-    - [0.22, 0.82, 0.17, 0.11]
-    - [0.41, 0.82, 0.17, 0.11]
-    - [0.60, 0.82, 0.17, 0.11]
-    - [0.79, 0.82, 0.17, 0.11]
-  enemy_left_tower_hp: [0.18, 0.115, 0.16, 0.012]
-  enemy_right_tower_hp: [0.66, 0.115, 0.16, 0.012]
-  enemy_king_hp: [0.40, 0.045, 0.20, 0.012]
-  our_left_tower_hp: [0.18, 0.625, 0.16, 0.012]
-  our_right_tower_hp: [0.66, 0.625, 0.16, 0.012]
-  our_king_hp: [0.40, 0.715, 0.20, 0.012]
+    - [0.235, 0.830, 0.160, 0.100]
+    - [0.420, 0.830, 0.160, 0.100]
+    - [0.600, 0.830, 0.160, 0.100]
+    - [0.780, 0.830, 0.160, 0.100]
+  enemy_left_tower_hp: [0.182, 0.235, 0.105, 0.006]
+  enemy_right_tower_hp: [0.744, 0.235, 0.105, 0.006]
+  enemy_king_hp: [0.530, 0.129, 0.130, 0.007]
+  our_left_tower_hp: [0.182, 0.6465, 0.105, 0.006]
+  our_right_tower_hp: [0.744, 0.6465, 0.105, 0.006]
+  our_king_hp: [0.530, 0.757, 0.130, 0.007]
 
 reward:
   gamma: 0.99

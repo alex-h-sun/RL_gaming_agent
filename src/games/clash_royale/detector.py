@@ -53,8 +53,9 @@ def detect_hp_fraction(frame: np.ndarray, region: list[float]) -> float:
     """Tower HP bar fill fraction in [0, 1]. Missing bar (destroyed) -> 0."""
     strip = crop_region(frame, region)
     hsv = cv2.cvtColor(strip, cv2.COLOR_RGB2HSV)
-    # Bright, saturated bar pixels against the dark arena background.
-    mask = (hsv[:, :, 2] > 100).astype(np.uint8) * 255
+    # The bar's filled portion is bright (V >= ~140); the empty portion is
+    # a dim gray-blue (V ~= 110), so the V threshold must sit between them.
+    mask = (hsv[:, :, 2] > 130).astype(np.uint8) * 255
     column_hit = (mask.mean(axis=0) > 127).astype(np.float64)
     return float(column_hit.mean())
 
