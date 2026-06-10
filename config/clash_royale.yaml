@@ -1,0 +1,78 @@
+game: clash_royale
+
+window:
+  mac_title: "iPhone Mirroring"
+
+observation:
+  frame_size: 84
+  frame_stack: 4
+
+arena:
+  grid_rows: 10
+  grid_cols: 7
+  # Normalized (x, y, w, h) region of the playable arena within the frame.
+  region: [0.0, 0.12, 1.0, 0.60]
+
+action:
+  num_cards: 5          # 0 = no-op, 1-4 = card slots
+  num_cells: 70         # grid_rows * grid_cols
+
+timing:
+  step_seconds: 0.25    # ~4 FPS decision rate
+  action_hold_frames: 2 # hold each action ~500ms before observing
+  tap_duration: 0.05
+  drag_duration: 0.30
+
+deck:
+  - knight
+  - archers
+  - fireball
+  - log
+  - minions
+  - mega_minion
+  - ice_golem
+  - ice_spirit
+
+# All UI regions are normalized (x, y, w, h) fractions of the mirrored
+# iPhone screen. Calibrate against real captures before live runs.
+ui_regions:
+  elixir_bar: [0.22, 0.945, 0.74, 0.02]
+  card_slots:
+    - [0.22, 0.82, 0.17, 0.11]
+    - [0.41, 0.82, 0.17, 0.11]
+    - [0.60, 0.82, 0.17, 0.11]
+    - [0.79, 0.82, 0.17, 0.11]
+  enemy_left_tower_hp: [0.18, 0.115, 0.16, 0.012]
+  enemy_right_tower_hp: [0.66, 0.115, 0.16, 0.012]
+  enemy_king_hp: [0.40, 0.045, 0.20, 0.012]
+  our_left_tower_hp: [0.18, 0.625, 0.16, 0.012]
+  our_right_tower_hp: [0.66, 0.625, 0.16, 0.012]
+  our_king_hp: [0.40, 0.715, 0.20, 0.012]
+  battle_button: [0.50, 0.62, 0.0, 0.0]   # tap point (x, y), w/h unused
+  ok_button: [0.50, 0.88, 0.0, 0.0]
+
+reward:
+  gamma: 0.99
+  aux_tower_destroy: 1.0
+  king_tower_destroy: 3.0
+  king_activate: 0.5
+  elixir_waste_coef: 0.1
+  elixir_waste_threshold: 9.0
+  survival: 0.01
+  win_bonus: 5.0
+  loss_penalty: -2.0
+
+curriculum:
+  # Rollout-collection rounds per phase. Phase 1 full shaping,
+  # phase 2 blended 50/50, phase 3 pure win/loss.
+  phase_rounds: 200
+
+ppo:
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  learning_rate: 0.00025
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.01
