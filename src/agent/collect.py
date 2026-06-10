@@ -71,6 +71,11 @@ def collect_rollouts(
 
             if terminated or truncated:
                 episode_rewards.append(episode_reward)
+                print(
+                    f"Episode {len(episode_rewards)} done "
+                    f"(reward {episode_reward:.2f}) — "
+                    f"{collected}/{n_steps} steps collected."
+                )
                 episode_reward = 0.0
                 obs, _ = env.reset()
                 episode_start = 1.0
