@@ -10,7 +10,8 @@ the gradient updates.
 
 See `PLAN.md` for the full design (reward shaping, curriculum, action space)
 and `TRAINING.md` for the step-by-step training workflow. `IMITATION.md`
-covers optional BC pre-training from YouTube gameplay (BCO).
+covers optional BC pre-training from YouTube gameplay (BCO), with
+`IMITATION_GUIDE.md` as the full, reproduce-from-scratch reference.
 
 ## Setup
 

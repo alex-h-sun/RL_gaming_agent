@@ -15,6 +15,10 @@ How it works:
 Everything heavy runs on Colab (`notebooks/bc_pretrain.ipynb`); the scripts
 also run locally if you prefer.
 
+> For a complete, anyone-can-follow reproduction guide (architecture, exact
+> data shapes, hyperparameters, verification, and how to adapt this to another
+> game), see [`IMITATION_GUIDE.md`](IMITATION_GUIDE.md).
+
 ## Your TODO checklist
 
 - [ ] **1. Collect IDM training data on the Mac.** The IDM needs live
